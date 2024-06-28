@@ -22,7 +22,23 @@ if (!SHOPIFY_DOMAIN || !SHOPIFY_ACCESS_TOKEN) {
 /**GraphQl**/
 const apolloServer = new ApolloServer(
     {
-        typeDefs:``,
+        typeDefs:`
+        type Product {
+            id: ID!
+            title: String!
+            price: Float!
+        }
+        
+        type Products {
+            id: ID!
+            title: String!
+            variants: [Product!]!
+        }
+        
+        type Query {
+            getProductsByName(name: String!): [Product]
+        }
+        `,
         resolvers:{Query:{
              //Query
        }}
