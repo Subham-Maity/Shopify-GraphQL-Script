@@ -6,8 +6,12 @@ const cors = require("cors");
 const axios = require("axios");
 require('dotenv').config();
 const http =  require('http');
+
+
+/**Secret Key handle**/
 //Example : `https://subham-test-store.myshopify.com/admin/api/2024-06`
 const SHOPIFY_DOMAIN = process.env.SHOPIFY_DOMAIN;
+//Example : `shppa_1234567890abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz`
 const SHOPIFY_ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
 
 if (!SHOPIFY_DOMAIN || !SHOPIFY_ACCESS_TOKEN) {
@@ -15,9 +19,16 @@ if (!SHOPIFY_DOMAIN || !SHOPIFY_ACCESS_TOKEN) {
     process.exit(1);
 }
 
+/**GraphQl**/
+const apolloServer = new ApolloServer(
+    {
+        typeDefs:``,
+        resolvers:{Query:{
+             //Query
+       }}
+ })
 
-
-//let's start the server
+/**Server handle**/
 async function startServer() {
     const app = express();
 
@@ -30,9 +41,15 @@ async function startServer() {
 
     app.use(express.urlencoded({extended: true}));
 
+
+    //ApolloServer Start
+    apolloServer.start().then(() => {
+        app.use('/graphql', expressMiddleware(apolloServer));
+    });
+
     const server = http.createServer(app);
     server.listen(port, () => {
-        console.log(`🚀 Server ready at XXXXXXXXXXXXXXXX:${port}`);
+        console.log(`🚀 Server ready at ZZZzzzzz....:${port}`);
     }).on(
         'error',
         (err) => {
