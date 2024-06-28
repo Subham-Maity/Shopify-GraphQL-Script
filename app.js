@@ -4,9 +4,11 @@ const { expressMiddleware } = require("@apollo/server/express4");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const axios = require("axios");
-require("dotenv").config();
 const http = require("http");
 const Shopify = require("shopify-api-node");
+const yargs = require("yargs/yargs");
+const { hideBin } = require("yargs/helpers");
+require("dotenv").config();
 
 /**Secret Key handle**/
 //Example : `https://subham-test-store.myshopify.com/admin/api/2024-06`
@@ -111,21 +113,18 @@ async function startServer() {
   });
 
   const server = http.createServer(app);
-  server
-    .listen(port, () => {
-      console.log(`🚀 Server ready at ZZZzzzzz....:${port}`);
-    })
-    .on("error", (err) => {
-      console.log(err);
-      process.exit();
-    });
+  await new Promise((resolve) => server.listen(port, resolve));
+  console.log(`🚀 Server ready at http://localhost:${port}/graphql`);
+  return server;
 }
-async function testQuery() {
+
+/**Test Query**/
+async function queryProducts(productName) {
   try {
     const response = await axios.post("http://localhost:8000/graphql", {
       query: `
-        query {
-          getProductsByName(name: "shirt") {
+        query($name: String!) {
+           getProductsByName(name: $name) {
             title
             variants {
               title
@@ -134,13 +133,57 @@ async function testQuery() {
           }
         }
       `,
+      variables: { name: productName },
     });
 
-    console.log(JSON.stringify(response.data, null, 2));
+    if (response.data.errors) {
+      console.error(
+        "GraphQL Errors:",
+        JSON.stringify(response.data.errors, null, 2),
+      );
+      return;
+    }
+    const products = response.data.data.getProductsByName;
+    if (products.length === 0) {
+      console.log(`No products found matching "${productName}"`);
+      return;
+    }
+    products.forEach((product) => {
+      console.log(product.title);
+      product.variants.forEach((variant) => {
+        console.log(`- ${variant.title} - price $${variant.price}`);
+      });
+    });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error details:");
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Data:", JSON.stringify(error.response.data, null, 2));
+    } else if (error.request) {
+      console.error("No response received:", error.request);
+    } else {
+      console.error("Error message:", error.message);
+    }
+    console.error("Error stack:", error.stack);
   }
 }
+/**Main handle**/
+async function main() {
+  const server = await startServer();
 
-testQuery().then((r) => console.log("Your product started"));
-startServer().then((r) => console.log("Server started"));
+  const argv = yargs(hideBin(process.argv))
+    .option("name", {
+      alias: "n",
+      describe: "Product name to search",
+      type: "string",
+      demandOption: true,
+    })
+    .help().argv;
+
+  await queryProducts(argv.name);
+
+  server.close();
+  process.exit();
+}
+
+main().catch(console.error);
